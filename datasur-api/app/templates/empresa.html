@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Datasur | Trade Intelligence</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  </head>
+  <body class="bg-slate-100 text-slate-900 min-h-screen">
+    <header class="bg-[#002e5b] text-white py-4 shadow-lg">
+      <div class="max-w-7xl mx-auto px-4 flex items-center justify-between">
+        <div class="text-2xl font-bold tracking-wide">DATASUR</div>
+        <button class="bg-[#f29100] hover:brightness-95 text-white font-semibold px-5 py-2 rounded-md">
+          Buscar
+        </button>
+      </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-8 space-y-8">
+      <section class="grid md:grid-cols-2 gap-6">
+        <div class="bg-white rounded-xl shadow p-6 border-l-8 border-[#002e5b]">
+          <p class="text-sm uppercase tracking-wider text-slate-500">Suma de US$ FOB</p>
+          <h1 class="text-4xl font-bold text-[#002e5b] mt-3" id="total-fob"></h1>
+          <p class="text-sm text-slate-600 mt-2" id="tg-suma"></p>
+        </div>
+        <div class="bg-white rounded-xl shadow p-6">
+          <h2 class="text-lg font-semibold text-[#002e5b]">Contexto</h2>
+          <p class="text-sm text-slate-600 mt-2">Reporte de {{ report.meta.operacion }} para {{ report.meta.pais }}.</p>
+          <p class="text-sm text-slate-600">Filtro activo: {{ report.meta.categoria }} = {{ report.meta.filtro }}</p>
+        </div>
+      </section>
+
+      <section class="grid lg:grid-cols-3 gap-6">
+        <div class="bg-white rounded-xl shadow p-4 lg:col-span-2">
+          <h3 class="font-semibold text-[#002e5b] mb-2">Principales destinos USD FOB</h3>
+          <div id="partner-chart" class="h-80"></div>
+        </div>
+        <div class="bg-white rounded-xl shadow p-4">
+          <h3 class="font-semibold text-[#002e5b] mb-2">Vías de transporte</h3>
+          <div id="transport-chart" class="h-80"></div>
+        </div>
+      </section>
+
+      <section class="bg-white rounded-xl shadow p-4">
+        <h3 class="font-semibold text-[#002e5b] mb-2">Evolución de las exportaciones 2024-2025</h3>
+        <div id="evolution-chart" class="h-96"></div>
+      </section>
+    </main>
+
+    <script>
+      const report = {{ report_json | safe }};
+      const moneyFormat = new Intl.NumberFormat("es-CL", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+
+      const total = report.total_fob ?? 0;
+      document.getElementById("total-fob").textContent = moneyFormat.format(total);
+      const tg = total === 0 ? 0 : ((report.monthly_evolution.at(-1)?.value || 0) / total) * 100;
+      document.getElementById("tg-suma").textContent = `% TG Suma: ${tg.toFixed(2)}%`;
+
+      Plotly.newPlot("partner-chart", [{
+        x: report.partner_ranking.map((i) => i.partner),
+        y: report.partner_ranking.map((i) => i.value),
+        type: "bar",
+        marker: { color: "#003f7f" }
+      }], { margin: { t: 20, r: 10, b: 60, l: 60 } }, { responsive: true });
+
+      Plotly.newPlot("transport-chart", [{
+        labels: report.transport_ranking.map((i) => i["via de transporte"]),
+        values: report.transport_ranking.map((i) => i.value),
+        type: "pie",
+        marker: { colors: ["#005f99", "#1a7fb8", "#4ea3d8", "#7fc2e8", "#a7d9f2"] }
+      }], { margin: { t: 20, r: 10, b: 20, l: 10 } }, { responsive: true });
+
+      Plotly.newPlot("evolution-chart", [{
+        x: report.monthly_evolution.map((i) => i.month),
+        y: report.monthly_evolution.map((i) => i.value),
+        type: "scatter",
+        mode: "lines+markers",
+        line: { color: "#003f7f", width: 3 }
+      }], { margin: { t: 20, r: 10, b: 60, l: 60 } }, { responsive: true });
+    </script>
+  </body>
+</html>
